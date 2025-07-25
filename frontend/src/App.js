@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MessageCircle, TrendingUp, Globe, Facebook, MapPin, Send, Sparkles, BarChart3, Users, Clock, CheckCircle2, ArrowRight, Menu, X, LogIn, Settings, Bell, Filter, Search, Calendar, Download, Share2, Heart, ThumbsUp, AlertCircle, Zap, Shield, Award, Target } from 'lucide-react';
+import { Star, MessageCircle, TrendingUp, Facebook, MapPin, Send, Sparkles, BarChart3, CheckCircle2, ArrowRight, Menu, X, Bell, Search, Download, Zap, Shield, Award, Target } from 'lucide-react';
 import './App.css';
 
 // API Configuration
