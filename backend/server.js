@@ -160,4 +160,30 @@ app.listen(PORT, () => {
   console.log(`🚀 TastyReply API Server running on port ${PORT}`);
 });
 
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'TastyReply API is running',
+    timestamp: new Date().toISOString(),
+    port: PORT 
+  });
+});
+
+// Start server
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 TastyReply API Server running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  server.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
+  });
+});
+
 module.exports = app;

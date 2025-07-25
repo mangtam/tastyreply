@@ -1,12 +1,16 @@
 {
   "name": "tastyreply-backend",
   "version": "1.0.0",
-  "description": "TastyReply API",
+  "description": "TastyReply API - Business review management platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "echo 'No build step required for Node.js'"
   },
+  "keywords": ["reviews", "ai", "business", "api"],
+  "author": "TastyReply",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
@@ -19,6 +23,7 @@
     "nodemon": "^3.0.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
