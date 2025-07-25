@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MessageCircle, TrendingUp, Globe, Facebook, MapPin, Send, Sparkles, BarChart3, Users, Clock, CheckCircle2, ArrowRight, Menu, X } from 'lucide-react';
+import { Star, MessageCircle, TrendingUp, Globe, Facebook, MapPin, Send, Sparkles, BarChart3, Users, Clock, CheckCircle2, ArrowRight, Menu, X, LogIn, Settings, Bell, Filter, Search, Calendar, Download, Share2, Heart, ThumbsUp, AlertCircle, Zap, Shield, Award, Target } from 'lucide-react';
 import './App.css';
 
-// API Configuration - This is the key part!
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// API Configuration
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const TastyReplyApp = () => {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -13,17 +13,26 @@ const TastyReplyApp = () => {
   const [isGeneratingReply, setIsGeneratingReply] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [filterPlatform, setFilterPlatform] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [analytics, setAnalytics] = useState({
     totalReviews: 0,
     responseRate: 0,
     averageRating: 0
   });
 
-  // Fetch reviews from backend
+  // Animation states
+  const [isVisible, setIsVisible] = useState(false);
+  const [animateStats, setAnimateStats] = useState(false);
+
   useEffect(() => {
+    setIsVisible(true);
     if (currentPage === 'dashboard') {
       fetchReviews();
       fetchAnalytics();
+      setTimeout(() => setAnimateStats(true), 500);
     }
   }, [currentPage]);
 
@@ -58,7 +67,6 @@ const TastyReplyApp = () => {
     }
   };
 
-  // Generate AI reply using backend
   const generateAIReply = async (review) => {
     setIsGeneratingReply(true);
     
@@ -91,7 +99,6 @@ const TastyReplyApp = () => {
     }
   };
 
-  // Send reply to backend
   const sendReply = async () => {
     if (selectedReview && aiReply) {
       try {
@@ -108,14 +115,12 @@ const TastyReplyApp = () => {
         const data = await response.json();
         
         if (data.success) {
-          // Update local state
           setReviews(reviews.map(review => 
             review.id === selectedReview.id 
               ? { ...review, replied: true, reply: aiReply }
               : review
           ));
           
-          // Close modal and refresh analytics
           setSelectedReview(null);
           setAiReply('');
           fetchAnalytics();
@@ -129,319 +134,637 @@ const TastyReplyApp = () => {
     }
   };
 
+  // Google OAuth login
+  const handleGoogleLogin = () => {
+    // In production, this would redirect to Google OAuth
+    const mockUser = {
+      name: 'John Doe',
+      email: 'john@restaurant.com',
+      business: 'Tasty Restaurant',
+      avatar: 'JD',
+      connectedPlatforms: ['google', 'facebook']
+    };
+    setUser(mockUser);
+    setShowAuthModal(false);
+    setCurrentPage('dashboard');
+  };
+
+  // Filter reviews
+  const filteredReviews = reviews.filter(review => {
+    const matchesPlatform = filterPlatform === 'all' || review.platform === filterPlatform;
+    const matchesSearch = searchQuery === '' || 
+      review.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      review.text.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesPlatform && matchesSearch;
+  });
+
+  const AuthModal = () => (
+    <div className="modal-overlay">
+      <div className="modal" style={{ padding: '32px', textAlign: 'center' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <div className="avatar avatar-lg" style={{ margin: '0 auto 16px' }}>
+            <MessageCircle size={24} />
+          </div>
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>Welcome to TastyReply</h2>
+          <p style={{ color: '#6b7280' }}>Connect your business accounts to manage reviews</p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+          <button
+            onClick={handleGoogleLogin}
+            className="btn btn-secondary"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '100%',
+              gap: '12px'
+            }}
+          >
+            <MapPin size={20} style={{ color: '#ef4444' }} />
+            Continue with Google My Business
+          </button>
+          
+          <button
+            onClick={handleGoogleLogin}
+            className="btn btn-secondary"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '100%',
+              gap: '12px'
+            }}
+          >
+            <Facebook size={20} style={{ color: '#3b82f6' }} />
+            Continue with Facebook Business
+          </button>
+        </div>
+
+        <button
+          onClick={() => setShowAuthModal(false)}
+          style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            background: 'none',
+            border: 'none',
+            color: '#9ca3af',
+            cursor: 'pointer'
+          }}
+        >
+          <X size={24} />
+        </button>
+      </div>
+    </div>
+  );
+
   const LandingPage = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #0f172a 100%)',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Animated background elements */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+        <div className="animate-pulse animation-delay-1000" style={{
+          position: 'absolute',
+          top: '25%',
+          left: '25%',
+          width: '384px',
+          height: '384px',
+          background: 'rgba(59, 130, 246, 0.1)',
+          borderRadius: '50%',
+          filter: 'blur(40px)'
+        }}></div>
+        <div className="animate-pulse animation-delay-2000" style={{
+          position: 'absolute',
+          top: '75%',
+          right: '25%',
+          width: '384px',
+          height: '384px',
+          background: 'rgba(147, 51, 234, 0.1)',
+          borderRadius: '50%',
+          filter: 'blur(40px)'
+        }}></div>
+        <div className="animate-pulse animation-delay-4000" style={{
+          position: 'absolute',
+          bottom: '25%',
+          left: '33%',
+          width: '384px',
+          height: '384px',
+          background: 'rgba(236, 72, 153, 0.1)',
+          borderRadius: '50%',
+          filter: 'blur(40px)'
+        }}></div>
+      </div>
+
       {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <MessageCircle className="h-8 w-8 text-blue-600 mr-2" />
-              <span className="text-2xl font-bold text-gray-900">TastyReply</span>
+      <nav className="glass" style={{ 
+        position: 'relative', 
+        zIndex: 10,
+        borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            height: '64px' 
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="avatar" style={{ marginRight: '12px' }}>
+                <MessageCircle size={24} />
+              </div>
+              <span style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>TastyReply</span>
             </div>
             
             {/* Desktop Navigation */}
-            <div className="hidden md:block">
-              <div className="flex items-center space-x-8">
-                <a href="#features" className="text-gray-600 hover:text-blue-600">Features</a>
-                <a href="#pricing" className="text-gray-600 hover:text-blue-600">Pricing</a>
-                <a href="#about" className="text-gray-600 hover:text-blue-600">About</a>
+            <div style={{ display: window.innerWidth >= 768 ? 'block' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                <a href="#features" style={{ color: 'rgba(255, 255, 255, 0.8)', textDecoration: 'none' }}>Features</a>
+                <a href="#pricing" style={{ color: 'rgba(255, 255, 255, 0.8)', textDecoration: 'none' }}>Pricing</a>
+                <a href="#about" style={{ color: 'rgba(255, 255, 255, 0.8)', textDecoration: 'none' }}>About</a>
                 <button 
-                  onClick={() => setCurrentPage('dashboard')}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => setShowAuthModal(true)}
+                  className="btn btn-primary"
                 >
-                  Try Dashboard
+                  Get Started
                 </button>
               </div>
             </div>
 
             {/* Mobile menu button */}
-            <div className="md:hidden">
+            <div style={{ display: window.innerWidth < 768 ? 'block' : 'none' }}>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="text-gray-600 hover:text-blue-600"
+                style={{ background: 'none', border: 'none', color: 'rgba(255, 255, 255, 0.8)' }}
               >
-                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
           </div>
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <div className="md:hidden">
-              <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-                <a href="#features" className="block px-3 py-2 text-gray-600 hover:text-blue-600">Features</a>
-                <a href="#pricing" className="block px-3 py-2 text-gray-600 hover:text-blue-600">Pricing</a>
-                <a href="#about" className="block px-3 py-2 text-gray-600 hover:text-blue-600">About</a>
-                <button 
-                  onClick={() => setCurrentPage('dashboard')}
-                  className="w-full text-left bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Try Dashboard
-                </button>
-              </div>
+            <div className="glass-dark" style={{ 
+              padding: '16px', 
+              borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <a href="#features" style={{ padding: '12px', color: 'rgba(255, 255, 255, 0.8)', textDecoration: 'none' }}>Features</a>
+              <a href="#pricing" style={{ padding: '12px', color: 'rgba(255, 255, 255, 0.8)', textDecoration: 'none' }}>Pricing</a>
+              <a href="#about" style={{ padding: '12px', color: 'rgba(255, 255, 255, 0.8)', textDecoration: 'none' }}>About</a>
+              <button 
+                onClick={() => setShowAuthModal(true)}
+                className="btn btn-primary"
+                style={{ marginTop: '8px' }}
+              >
+                Get Started
+              </button>
             </div>
           )}
         </div>
       </nav>
 
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-        <div className="text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-            Manage All Your
-            <span className="text-blue-600 block">Business Reviews</span>
-            in One Place
+      <div style={{ 
+        position: 'relative', 
+        maxWidth: '1280px', 
+        margin: '0 auto', 
+        padding: '80px 16px 64px',
+        zIndex: 5
+      }}>
+        <div className={`animate-fadeInUp ${isVisible ? '' : 'opacity-0'}`} style={{ textAlign: 'center' }}>
+          <div className="badge" style={{ 
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '8px 16px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '9999px',
+            color: 'rgba(255, 255, 255, 0.9)',
+            fontSize: '14px',
+            marginBottom: '32px'
+          }}>
+            <Sparkles size={16} style={{ marginRight: '8px', color: '#fbbf24' }} />
+            Powered by Advanced AI Technology
+          </div>
+          
+          <h1 style={{ 
+            fontSize: '4rem', 
+            fontWeight: 'bold', 
+            color: 'white', 
+            marginBottom: '24px',
+            lineHeight: '1.1'
+          }}>
+            Transform Your
+            <span style={{ 
+              display: 'block',
+              background: 'linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
+              Review Management
+            </span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            TastyReply aggregates reviews from Google Maps, Facebook, and more. 
-            Respond with AI-powered replies and gain insights to grow your business.
+          
+          <p style={{ 
+            fontSize: '20px', 
+            color: 'rgba(255, 255, 255, 0.8)', 
+            marginBottom: '32px', 
+            maxWidth: '768px', 
+            margin: '0 auto 32px',
+            lineHeight: '1.6'
+          }}>
+            Connect Google Maps, Facebook, and more. Respond with AI-powered replies, 
+            analyze sentiment, and boost your online reputation automatically.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: window.innerWidth < 640 ? 'column' : 'row',
+            gap: '16px', 
+            justifyContent: 'center',
+            marginBottom: '64px'
+          }}>
             <button 
-              onClick={() => setCurrentPage('dashboard')}
-              className="bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center"
+              onClick={() => setShowAuthModal(true)}
+              className="btn btn-primary btn-lg hover-lift"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              Try Live Demo <ArrowRight className="ml-2 h-5 w-5" />
+              Start Free Trial 
+              <ArrowRight size={20} style={{ marginLeft: '8px' }} />
             </button>
-            <button className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors">
+            <button className="btn btn-secondary btn-lg">
               Watch Demo
             </button>
           </div>
+
+          {/* Stats */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
+            gap: '32px', 
+            maxWidth: '512px', 
+            margin: '0 auto'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>50K+</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>Reviews Managed</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>95%</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>Response Rate</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>2.5x</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '14px' }}>Faster Replies</div>
+            </div>
+          </div>
         </div>
 
-        {/* Hero Image/Stats */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="bg-white rounded-xl p-6 shadow-lg text-center">
-            <Globe className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900">5+ Platforms</h3>
-            <p className="text-gray-600">Connect all review platforms</p>
+        {/* Hero Cards */}
+        <div style={{ 
+          marginTop: '80px', 
+          display: 'grid', 
+          gridTemplateColumns: window.innerWidth >= 768 ? 'repeat(3, 1fr)' : '1fr',
+          gap: '32px'
+        }}>
+          <div className="glass-card hover-lift animate-float">
+            <div style={{ padding: '32px', textAlign: 'center' }}>
+              <div className="avatar avatar-lg" style={{ 
+                background: 'linear-gradient(135deg, #ef4444, #f97316)',
+                marginBottom: '24px'
+              }}>
+                <MapPin size={32} />
+              </div>
+              <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>Google Integration</h3>
+              <p style={{ color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.6' }}>
+                Seamlessly sync with Google My Business and manage all your location reviews in real-time.
+              </p>
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-lg text-center">
-            <Sparkles className="h-12 w-12 text-green-600 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900">AI Responses</h3>
-            <p className="text-gray-600">Smart, personalized replies</p>
+          
+          <div className="glass-card hover-lift animate-float animation-delay-300">
+            <div style={{ padding: '32px', textAlign: 'center' }}>
+              <div className="avatar avatar-lg" style={{ 
+                background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+                marginBottom: '24px'
+              }}>
+                <Sparkles size={32} />
+              </div>
+              <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>AI Responses</h3>
+              <p style={{ color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.6' }}>
+                Generate personalized, professional responses that match your brand voice and customer sentiment.
+              </p>
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-lg text-center">
-            <BarChart3 className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900">Analytics</h3>
-            <p className="text-gray-600">Actionable business insights</p>
+          
+          <div className="glass-card hover-lift animate-float animation-delay-500">
+            <div style={{ padding: '32px', textAlign: 'center' }}>
+              <div className="avatar avatar-lg" style={{ 
+                background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+                marginBottom: '24px'
+              }}>
+                <BarChart3 size={32} />
+              </div>
+              <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>Smart Analytics</h3>
+              <p style={{ color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.6' }}>
+                Get actionable insights about customer sentiment, trends, and opportunities to improve.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Features Section */}
-      <div id="features" className="bg-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Powerful Features</h2>
-            <p className="text-xl text-gray-600">Everything you need to manage your online reputation</p>
+      <div id="features" className="glass" style={{ 
+        position: 'relative',
+        padding: '80px 0',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+            <h2 style={{ fontSize: '48px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>Powerful Features</h2>
+            <p style={{ fontSize: '20px', color: 'rgba(255, 255, 255, 0.7)' }}>Everything you need for professional review management</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
-              <MapPin className="h-10 w-10 text-red-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Google Maps Integration</h3>
-              <p className="text-gray-600">Automatically sync and manage all your Google Business reviews in real-time.</p>
-            </div>
-            
-            <div className="p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
-              <Facebook className="h-10 w-10 text-blue-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Facebook Reviews</h3>
-              <p className="text-gray-600">Connect your Facebook Business page and manage all customer feedback.</p>
-            </div>
-            
-            <div className="p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
-              <Sparkles className="h-10 w-10 text-purple-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">AI-Powered Replies</h3>
-              <p className="text-gray-600">Generate personalized, professional responses with advanced AI technology.</p>
-            </div>
-
-            <div className="p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
-              <TrendingUp className="h-10 w-10 text-green-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Sentiment Analysis</h3>
-              <p className="text-gray-600">Track customer sentiment trends and identify areas for improvement.</p>
-            </div>
-
-            <div className="p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
-              <Users className="h-10 w-10 text-orange-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Team Collaboration</h3>
-              <p className="text-gray-600">Allow multiple team members to manage and respond to reviews.</p>
-            </div>
-
-            <div className="p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-shadow">
-              <Clock className="h-10 w-10 text-indigo-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Real-time Alerts</h3>
-              <p className="text-gray-600">Get instant notifications when new reviews are posted.</p>
-            </div>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: window.innerWidth >= 1024 ? 'repeat(3, 1fr)' : window.innerWidth >= 768 ? 'repeat(2, 1fr)' : '1fr',
+            gap: '32px'
+          }}>
+            {[
+              { icon: MapPin, title: "Google My Business", desc: "Sync all your Google reviews automatically", color: "linear-gradient(135deg, #ef4444, #f97316)" },
+              { icon: Facebook, title: "Facebook Integration", desc: "Manage Facebook page reviews seamlessly", color: "linear-gradient(135deg, #3b82f6, #2563eb)" },
+              { icon: Zap, title: "Instant Notifications", desc: "Get alerted immediately when reviews arrive", color: "linear-gradient(135deg, #eab308, #f97316)" },
+              { icon: Shield, title: "Sentiment Analysis", desc: "Understand customer emotions automatically", color: "linear-gradient(135deg, #10b981, #059669)" },
+              { icon: Award, title: "Team Collaboration", desc: "Multiple users with role-based permissions", color: "linear-gradient(135deg, #8b5cf6, #ec4899)" },
+              { icon: Target, title: "Performance Insights", desc: "Track metrics that matter to your business", color: "linear-gradient(135deg, #06b6d4, #3b82f6)" }
+            ].map((feature, index) => (
+              <div key={index} className="glass-card hover-lift">
+                <div style={{ padding: '32px' }}>
+                  <div className="avatar" style={{ 
+                    background: feature.color,
+                    marginBottom: '24px'
+                  }}>
+                    <feature.icon size={24} />
+                  </div>
+                  <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginBottom: '12px' }}>{feature.title}</h3>
+                  <p style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{feature.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       {/* CTA Section */}
-      <div className="bg-blue-600 py-16">
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <h2 className="text-4xl font-bold text-white mb-4">Ready to Transform Your Review Management?</h2>
-          <p className="text-xl text-blue-100 mb-8">Join thousands of businesses already using TastyReply to improve their online reputation.</p>
+      <div className="glass" style={{ 
+        position: 'relative',
+        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2))',
+        padding: '80px 0',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <div style={{ maxWidth: '1024px', margin: '0 auto', textAlign: 'center', padding: '0 16px' }}>
+          <h2 style={{ fontSize: '48px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>Ready to Transform Your Reviews?</h2>
+          <p style={{ fontSize: '20px', color: 'rgba(255, 255, 255, 0.8)', marginBottom: '32px' }}>Join thousands of businesses already using TastyReply to improve their online reputation.</p>
           <button 
-            onClick={() => setCurrentPage('dashboard')}
-            className="bg-white text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors"
+            onClick={() => setShowAuthModal(true)}
+            className="btn btn-primary btn-lg shadow-glow"
           >
             Start Your Free Trial
           </button>
         </div>
       </div>
+
+      {showAuthModal && <AuthModal />}
     </div>
   );
 
   const Dashboard = () => (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       {/* Dashboard Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <MessageCircle className="h-8 w-8 text-blue-600 mr-2" />
-              <span className="text-2xl font-bold text-gray-900">TastyReply</span>
+      <div style={{ 
+        background: 'white', 
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', 
+        borderBottom: '1px solid #e5e7eb',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="avatar" style={{ marginRight: '12px' }}>
+                <MessageCircle size={24} />
+              </div>
+              <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>TastyReply</span>
             </div>
-            <div className="flex items-center space-x-4">
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button style={{ 
+                position: 'relative', 
+                padding: '8px', 
+                color: '#6b7280', 
+                background: 'none', 
+                border: 'none',
+                cursor: 'pointer'
+              }}>
+                <Bell size={20} />
+                <span className="notification-dot"></span>
+              </button>
               <button 
                 onClick={() => setCurrentPage('landing')}
-                className="text-gray-600 hover:text-blue-600"
+                style={{ color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 ← Back to Home
               </button>
-              <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                JD
-              </div>
+              {user && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>{user.name}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{user.business}</div>
+                  </div>
+                  <div className="avatar">
+                    {user.avatar}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 16px' }}>
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <Star className="h-8 w-8 text-yellow-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Average Rating</p>
-                <p className="text-2xl font-bold text-gray-900">{analytics.averageRating || '4.2'}</p>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: window.innerWidth >= 768 ? 'repeat(4, 1fr)' : window.innerWidth >= 640 ? 'repeat(2, 1fr)' : '1fr',
+          gap: '24px', 
+          marginBottom: '32px'
+        }}>
+          {[
+            { icon: Star, label: 'Average Rating', value: analytics.averageRating || '4.2', color: '#eab308' },
+            { icon: MessageCircle, label: 'Total Reviews', value: analytics.totalReviews || reviews.length, color: '#3b82f6' },
+            { icon: CheckCircle2, label: 'Response Rate', value: `${analytics.responseRate || 0}%`, color: '#10b981' },
+            { icon: TrendingUp, label: 'This Month', value: `+${reviews.length}`, color: '#8b5cf6' }
+          ].map((stat, index) => (
+            <div key={index} className={`stats-card hover-lift ${animateStats ? 'animate-fadeInUp' : ''}`} style={{ animationDelay: `${index * 0.1}s` }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ 
+                  padding: '12px', 
+                  borderRadius: '12px', 
+                  background: `${stat.color}20`,
+                  marginRight: '16px'
+                }}>
+                  <stat.icon size={24} style={{ color: stat.color }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280', marginBottom: '4px' }}>{stat.label}</p>
+                  <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>{stat.value}</p>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <MessageCircle className="h-8 w-8 text-blue-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Reviews</p>
-                <p className="text-2xl font-bold text-gray-900">{analytics.totalReviews || reviews.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Response Rate</p>
-                <p className="text-2xl font-bold text-gray-900">{analytics.responseRate || 0}%</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-purple-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">This Month</p>
-                <p className="text-2xl font-bold text-gray-900">+{reviews.length}</p>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Reviews Section */}
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Recent Reviews</h2>
-              {loading && (
-                <div className="flex items-center text-sm text-gray-500">
-                  <div className="animate-spin h-4 w-4 mr-2 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                  Loading...
+        <div className="card">
+          <div style={{ padding: '24px', borderBottom: '1px solid #f3f4f6' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: window.innerWidth < 640 ? 'column' : 'row',
+              alignItems: window.innerWidth < 640 ? 'flex-start' : 'center',
+              justifyContent: 'space-between',
+              gap: '16px'
+            }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>Recent Reviews</h2>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div className="input-with-icon">
+                  <Search className="input-icon" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search reviews..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="input"
+                    style={{ paddingLeft: '48px', fontSize: '14px' }}
+                  />
                 </div>
-              )}
+                
+                <select
+                  value={filterPlatform}
+                  onChange={(e) => setFilterPlatform(e.target.value)}
+                  className="input"
+                  style={{ fontSize: '14px' }}
+                >
+                  <option value="all">All Platforms</option>
+                  <option value="google">Google</option>
+                  <option value="facebook">Facebook</option>
+                </select>
+                
+                <button className="btn btn-sm" style={{ padding: '8px' }}>
+                  <Download size={16} />
+                </button>
+              </div>
             </div>
           </div>
           
-          <div className="divide-y divide-gray-200">
-            {reviews.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>No reviews found. Connect your Google Maps and Facebook accounts to start managing reviews.</p>
+          <div>
+            {loading ? (
+              <div style={{ padding: '32px', textAlign: 'center' }}>
+                <div className="loading-spinner" style={{ margin: '0 auto 16px' }}></div>
+                <p style={{ color: '#6b7280' }}>Loading reviews...</p>
+              </div>
+            ) : filteredReviews.length === 0 ? (
+              <div style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
+                <MessageCircle size={48} style={{ color: '#d1d5db', margin: '0 auto 16px' }} />
+                <p>{searchQuery || filterPlatform !== 'all' ? 'No reviews match your filters.' : 'No reviews found. Connect your Google Maps and Facebook accounts to start managing reviews.'}</p>
               </div>
             ) : (
-              reviews.map((review) => (
-                <div key={review.id} className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4 flex-1">
-                      <div className="flex-shrink-0">
-                        <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center text-sm font-medium text-gray-700">
-                          {review.avatar}
-                        </div>
+              filteredReviews.map((review) => (
+                <div key={review.id} className="review-card" style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flex: 1 }}>
+                      <div className="avatar">
+                        {review.avatar}
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <p className="text-sm font-medium text-gray-900">{review.customerName}</p>
-                          <div className="flex items-center">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                          <p style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>{review.customerName}</p>
+                          <div className="star-rating">
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                                }`}
+                                size={16}
+                                className={i < review.rating ? 'star' : ''}
+                                style={{ color: i < review.rating ? '#fbbf24' : '#d1d5db' }}
+                                fill={i < review.rating ? 'currentColor' : 'none'}
                               />
                             ))}
                           </div>
-                          <span className="text-xs text-gray-500">{review.date}</span>
-                          <div className="flex items-center space-x-1">
+                          <span style={{ fontSize: '12px', color: '#6b7280' }}>{review.date}</span>
+                          <div className={`badge badge-${review.platform}`}>
                             {review.platform === 'google' ? (
-                              <MapPin className="h-4 w-4 text-red-500" />
+                              <MapPin size={12} style={{ marginRight: '4px' }} />
                             ) : (
-                              <Facebook className="h-4 w-4 text-blue-600" />
+                              <Facebook size={12} style={{ marginRight: '4px' }} />
                             )}
-                            <span className="text-xs text-gray-500 capitalize">{review.platform}</span>
+                            {review.platform === 'google' ? 'Google' : 'Facebook'}
                           </div>
                         </div>
                         
-                        <p className="text-sm text-gray-700 mb-3">{review.text}</p>
+                        <p style={{ fontSize: '14px', color: '#374151', marginBottom: '12px', lineHeight: '1.5' }}>{review.text}</p>
                         
                         {review.replied && review.reply && (
-                          <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mt-3">
-                            <p className="text-sm text-blue-800">
-                              <span className="font-medium">Your Reply:</span> {review.reply}
-                            </p>
+                          <div style={{ 
+                            background: 'linear-gradient(135deg, #eff6ff, #f3e8ff)',
+                            borderLeft: '4px solid #3b82f6',
+                            padding: '16px',
+                            marginTop: '12px',
+                            borderRadius: '0 8px 8px 0'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                              <CheckCircle2 size={16} style={{ color: '#3b82f6', marginTop: '2px', flexShrink: 0 }} />
+                              <div>
+                                <p style={{ fontSize: '14px', fontWeight: '500', color: '#1e40af', marginBottom: '4px' }}>Your Reply:</p>
+                                <p style={{ fontSize: '14px', color: '#1e40af' }}>{review.reply}</p>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
                     </div>
                     
-                    <div className="flex-shrink-0 ml-4">
+                    <div style={{ marginLeft: '16px', flexShrink: 0 }}>
                       {!review.replied ? (
                         <button
                           onClick={() => setSelectedReview(review)}
-                          className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
+                          className="btn btn-sm hover-lift"
+                          style={{ 
+                            background: '#eff6ff',
+                            border: '2px solid #bfdbfe',
+                            color: '#1d4ed8',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
                         >
-                          <Sparkles className="h-3 w-3 mr-1" />
+                          <Sparkles size={16} />
                           AI Reply
                         </button>
                       ) : (
-                        <span className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded text-green-700 bg-green-50">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <span className="badge badge-success">
+                          <CheckCircle2 size={16} style={{ marginRight: '4px' }} />
                           Replied
                         </span>
                       )}
@@ -454,81 +777,137 @@ const TastyReplyApp = () => {
         </div>
       </div>
 
-      {/* AI Reply Modal */}
+      {/* Enhanced AI Reply Modal */}
       {selectedReview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Generate AI Reply</h3>
+        <div className="modal-overlay">
+          <div className="modal">
+            <div style={{ 
+              padding: '24px', 
+              borderBottom: '1px solid #f3f4f6',
+              background: 'linear-gradient(135deg, #eff6ff, #f3e8ff)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="avatar">
+                    <Sparkles size={20} />
+                  </div>
+                  <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>AI Reply Assistant</h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedReview(null);
+                    setAiReply('');
+                  }}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    color: '#9ca3af', 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  <X size={24} />
+                </button>
+              </div>
             </div>
             
-            <div className="p-6">
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="font-medium">{selectedReview.customerName}</span>
-                  <div className="flex items-center">
+            <div style={{ padding: '24px' }}>
+              <div style={{ 
+                background: '#f9fafb', 
+                padding: '24px', 
+                borderRadius: '12px', 
+                marginBottom: '24px',
+                border: '1px solid #f3f4f6'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <div className="avatar avatar-sm">
+                    {selectedReview.avatar}
+                  </div>
+                  <span style={{ fontWeight: '500', color: '#1f2937' }}>{selectedReview.customerName}</span>
+                  <div className="star-rating">
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`h-4 w-4 ${
-                          i < selectedReview.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                        }`}
+                        size={16}
+                        style={{ color: i < selectedReview.rating ? '#fbbf24' : '#d1d5db' }}
+                        fill={i < selectedReview.rating ? 'currentColor' : 'none'}
                       />
                     ))}
                   </div>
                 </div>
-                <p className="text-gray-700">{selectedReview.text}</p>
+                <p style={{ color: '#374151', lineHeight: '1.5' }}>{selectedReview.text}</p>
               </div>
               
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '12px' }}>
                   AI Generated Reply
                 </label>
-                <textarea
-                  value={aiReply}
-                  onChange={(e) => setAiReply(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows="4"
-                  placeholder={isGeneratingReply ? "Generating AI reply..." : "Click 'Generate AI Reply' to create a response"}
-                  disabled={isGeneratingReply}
-                />
+                <div style={{ position: 'relative' }}>
+                  <textarea
+                    value={aiReply}
+                    onChange={(e) => setAiReply(e.target.value)}
+                    className="input"
+                    style={{ 
+                      minHeight: '120px', 
+                      resize: 'none',
+                      fontSize: '14px'
+                    }}
+                    placeholder={isGeneratingReply ? "Generating AI reply..." : "Click 'Generate AI Reply' to create a professional response"}
+                    disabled={isGeneratingReply}
+                  />
+                  {isGeneratingReply && (
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div className="loading-spinner"></div>
+                        <span style={{ color: '#3b82f6', fontWeight: '500' }}>Generating reply...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               
-              <div className="flex justify-between">
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                 <button
                   onClick={() => generateAIReply(selectedReview)}
                   disabled={isGeneratingReply}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+                  className="btn"
+                  style={{
+                    background: '#f3e8ff',
+                    border: '2px solid #d8b4fe',
+                    color: '#7c3aed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
                 >
-                  {isGeneratingReply ? (
-                    <>
-                      <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Generate AI Reply
-                    </>
-                  )}
+                  <Sparkles size={16} />
+                  Generate AI Reply
                 </button>
                 
-                <div className="space-x-3">
+                <div style={{ display: 'flex', gap: '12px' }}>
                   <button
                     onClick={() => {
                       setSelectedReview(null);
                       setAiReply('');
                     }}
-                    className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    className="btn btn-secondary"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={sendReply}
                     disabled={!aiReply || isGeneratingReply}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                    className="btn btn-primary shadow-glow"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    <Send className="h-4 w-4 mr-2" />
+                    <Send size={16} />
                     Send Reply
                   </button>
                 </div>
