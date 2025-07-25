@@ -1,5 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MessageCircle, TrendingUp, Facebook, MapPin, Send, Sparkles, BarChart3, CheckCircle2, ArrowRight, Menu, X, Bell, Search, Download, Zap, Shield, Award, Target } from 'lucide-react';
+// Remove unused imports - replace line 2 with this:
+import { 
+  Star, 
+  MessageCircle, 
+  TrendingUp, 
+  Facebook, 
+  MapPin, 
+  Send, 
+  Sparkles, 
+  BarChart3, 
+  CheckCircle2, 
+  ArrowRight, 
+  Menu, 
+  X, 
+  Bell, 
+  Search, 
+  Download, 
+  Zap, 
+  Shield, 
+  Award, 
+  Target 
+} from 'lucide-react';
 import './App.css';
 
 // API Configuration
