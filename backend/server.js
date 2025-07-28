@@ -5,6 +5,11 @@ const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
+const passport = require('passport');
+const session = require('express-session');
+const jwt = require('jsonwebtoken');
+const GoogleReviewsService = require('./services/googleReviews');
+
 // Railway sets PORT environment variable, default to 3000
 const PORT = process.env.PORT || 3000;
 
@@ -284,6 +289,8 @@ app.use((err, req, res, next) => {
   });
 });
 
+app.use('/auth', require('./routes/auth'));
+
 // 404 handler
 app.use('*', (req, res) => {
   console.log(`❓ 404 - Route not found: ${req.originalUrl}`);
@@ -292,6 +299,9 @@ app.use('*', (req, res) => {
     error: 'Endpoint not found' 
   });
 });
+
+app.use('/auth', require('./routes/auth'));
+
 
 // Start server - CRITICAL: Listen on 0.0.0.0 for Railway
 const server = app.listen(PORT, '0.0.0.0', () => {
@@ -313,6 +323,14 @@ process.on('SIGINT', () => {
   console.log('⚠️  SIGINT received. Shutting down gracefully...');
   server.close(() => {
     console.log('✅ Process terminated');
+  });
+});
+
+app.use('*', (req, res) => {
+  console.log(`❓ 404 - Route not found: ${req.originalUrl}`);
+  res.status(404).json({ 
+    success: false, 
+    error: 'Endpoint not found' 
   });
 });
 
