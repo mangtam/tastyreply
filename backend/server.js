@@ -19,8 +19,8 @@ const PORT = process.env.PORT || 5001;
 
 // ✅ Ensure MONGODB_URI is set
 if (!process.env.MONGODB_URI) {
-  console.error('❌ MONGODB_URI environment variable is not set. Exiting...');
-  process.exit(1);
+  console.warn('⚠️ MONGODB_URI environment variable is not set. Using local MongoDB.');
+  // Don't exit - let it try to connect to local MongoDB or continue without DB
 }
 
 // Connect to MongoDB Atlas
