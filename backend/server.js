@@ -160,9 +160,11 @@ app.get('/auth/google', (req, res) => {
 
 // Include auth routes if they exist
 try {
-  app.use('/auth', require('./routes/auth'));
+  const authRoutes = require('./routes/auth');
+  app.use('/auth', authRoutes);
+  console.log('✅ Auth routes loaded successfully');
 } catch (error) {
-  console.log('Auth routes not found, skipping...');
+  console.warn('⚠️ Auth routes not loaded:', error.message);
 }
 
 // Google OAuth Callback with MongoDB
@@ -310,7 +312,7 @@ app.get('/api/reviews', authenticateToken, async (req, res) => {
     console.log('📊 Fetching reviews for user:', req.user.name);
     const allReviews = [];
 
-    if (req.user.provider === 'google' && req.user.accessToken) {
+    if (req.user.provider === 'google' && req.user.accessToken && GoogleReviewsService) {
       try {
         console.log('🔍 Fetching Google My Business reviews...');
         const googleService = new GoogleReviewsService(req.user.accessToken);
@@ -427,9 +429,14 @@ app.use((req, res) => {
 });
 
 // Start server - bind to 0.0.0.0 for Railway
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🔐 OAuth redirect URI: ${process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5001/auth/google/callback'}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-  console.log('✅ Server setup complete with authentication');
-});
+try {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🔐 OAuth redirect URI: ${process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5001/auth/google/callback'}`);
+    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    console.log('✅ Server setup complete with authentication');
+  });
+} catch (error) {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+}
