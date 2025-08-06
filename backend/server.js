@@ -9,13 +9,20 @@ const Review = require('./models/Review');
 const passport = require('passport');
 const session = require('express-session');
 const jwt = require('jsonwebtoken');
-const GoogleReviewsService = require('./services/googleReviews');
+// Conditionally load GoogleReviewsService if it exists
+let GoogleReviewsService;
+try {
+  GoogleReviewsService = require('./services/googleReviews');
+} catch (error) {
+  console.warn('⚠️ GoogleReviewsService not loaded:', error.message);
+}
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+console.log(`📢 Starting server setup on port ${PORT}...`);
 
 // ✅ Ensure MONGODB_URI is set
 if (!process.env.MONGODB_URI) {
@@ -29,12 +36,18 @@ connectDB().catch(err => {
   console.log('⚠️ Server will continue without database connection');
 });
 
-// Google OAuth2 Client
-const oauth2Client = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5001/auth/google/callback'
-);
+// Google OAuth2 Client - Initialize only if credentials are available
+let oauth2Client;
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  oauth2Client = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5001/auth/google/callback'
+  );
+  console.log('✅ Google OAuth2 client initialized');
+} else {
+  console.warn('⚠️ Google OAuth credentials not found - OAuth features disabled');
+}
 
 // Middleware
 app.use(cors({
@@ -120,6 +133,13 @@ app.get('/health', (req, res) => {
 
 // Google OAuth Routes
 app.get('/auth/google', (req, res) => {
+  if (!oauth2Client) {
+    return res.status(503).json({ 
+      success: false, 
+      error: 'OAuth not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.' 
+    });
+  }
+  
   try {
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
@@ -150,7 +170,11 @@ app.get('/auth/google/callback', async (req, res) => {
   const { code } = req.query;
 
   if (!code) {
-    return res.redirect(`${process.env.FRONTEND_URL}/auth-error?error=no_code`);
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth-error?error=no_code`);
+  }
+
+  if (!oauth2Client) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth-error?error=oauth_not_configured`);
   }
 
   try {

@@ -2,5 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "node server.js"
 restartPolicyType = "always"
+healthcheckPath = "/"
+healthcheckTimeoutSec = 30
