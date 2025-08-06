@@ -1,4 +1,4 @@
-// server.js - Updated with MongoDB integration
+// server.js - Updated with MongoDB integration and Railway compatibility fixes
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -16,6 +16,12 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+// ✅ Ensure MONGODB_URI is set
+if (!process.env.MONGODB_URI) {
+  console.error('❌ MONGODB_URI environment variable is not set. Exiting...');
+  process.exit(1);
+}
 
 // Connect to MongoDB Atlas
 connectDB();
@@ -46,7 +52,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// JWT Authentication Middleware (SINGLE DECLARATION)
+// JWT Authentication Middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -88,24 +94,16 @@ const mockReviews = [
   }
 ];
 
-// Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    // Check MongoDB connection
-    const dbStatus = require('mongoose').connection.readyState === 1 ? 'connected' : 'disconnected';
-    
-    res.json({ 
-      status: 'OK', 
-      timestamp: new Date().toISOString(),
-      database: dbStatus
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'ERROR', 
-      timestamp: new Date().toISOString(),
-      error: error.message
-    });
-  }
+// ✅ Resilient Health check endpoint
+app.get('/health', (req, res) => {
+  const mongoose = require('mongoose');
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    database: dbStatus
+  });
 });
 
 // Google OAuth Routes
@@ -144,19 +142,16 @@ app.get('/auth/google/callback', async (req, res) => {
   }
 
   try {
-    // Exchange code for tokens
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
 
-    // Get user info
     const ticket = await oauth2Client.verifyIdToken({
       idToken: tokens.id_token,
       audience: process.env.GOOGLE_CLIENT_ID
     });
-    
+
     const payload = ticket.getPayload();
-    
-    // Create or update user in MongoDB
+
     const userData = {
       googleId: payload.sub,
       email: payload.email,
@@ -172,7 +167,6 @@ app.get('/auth/google/callback', async (req, res) => {
       lastLogin: new Date()
     };
 
-    // Use findOneAndUpdate with upsert to create or update user
     const user = await User.findOneAndUpdate(
       { googleId: userData.googleId },
       userData,
@@ -181,9 +175,8 @@ app.get('/auth/google/callback', async (req, res) => {
 
     console.log('User saved to MongoDB:', user.email);
 
-    // Create JWT token for your app
     const appToken = jwt.sign(
-      { 
+      {
         userId: user._id.toString(),
         googleId: user.googleId,
         email: user.email,
@@ -195,7 +188,6 @@ app.get('/auth/google/callback', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    // Redirect to frontend with token
     res.redirect(`${process.env.FRONTEND_URL}/dashboard?token=${appToken}`);
   } catch (error) {
     console.error('OAuth callback error:', error);
@@ -203,17 +195,17 @@ app.get('/auth/google/callback', async (req, res) => {
   }
 });
 
-// Protected route - get current user (SINGLE ENDPOINT)
+// Protected route - get current user
 app.get('/api/user', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-googleTokens');
-    
+
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       user: {
         id: user._id,
         name: user.name,
@@ -234,18 +226,15 @@ app.get('/api/user', authenticateToken, async (req, res) => {
 app.get('/api/google/accounts', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
-    
+
     if (!user || !user.googleTokens) {
       return res.status(401).json({ success: false, error: 'Google authentication required' });
     }
 
-    // Set credentials for API calls
     oauth2Client.setCredentials({
       refresh_token: user.googleTokens.refresh_token
     });
 
-    // For now, return mock data
-    // TODO: Implement actual Google My Business API call
     res.json({
       success: true,
       accounts: user.businesses || [{
@@ -264,12 +253,10 @@ app.get('/api/google/accounts', authenticateToken, async (req, res) => {
 // Get reviews from database
 app.get('/api/reviews/google', authenticateToken, async (req, res) => {
   try {
-    // Fetch reviews from database
     const reviews = await Review.find({ userId: req.user.userId })
       .sort({ reviewDate: -1 })
       .limit(50);
 
-    // If no reviews in database, return mock data for demo
     if (reviews.length === 0) {
       return res.json({ success: true, reviews: mockReviews });
     }
@@ -286,14 +273,13 @@ app.get('/api/reviews', authenticateToken, async (req, res) => {
   try {
     console.log('📊 Fetching reviews for user:', req.user.name);
     const allReviews = [];
-    
-    // Fetch Google reviews if user authenticated with Google
+
     if (req.user.provider === 'google' && req.user.accessToken) {
       try {
         console.log('🔍 Fetching Google My Business reviews...');
         const googleService = new GoogleReviewsService(req.user.accessToken);
         const accounts = await googleService.getAccounts();
-        
+
         for (const account of accounts) {
           const locations = await googleService.getLocations(account.name);
           for (const location of locations) {
@@ -305,8 +291,7 @@ app.get('/api/reviews', authenticateToken, async (req, res) => {
         console.error('❌ Google reviews error:', error.message);
       }
     }
-    
-    // If no real reviews found, return demo data
+
     if (allReviews.length === 0) {
       console.log('📝 No real reviews found, returning demo data');
       return res.json({
@@ -317,10 +302,9 @@ app.get('/api/reviews', authenticateToken, async (req, res) => {
         message: 'Connect your Google My Business account to see real reviews'
       });
     }
-    
-    // Sort reviews by date (newest first)
+
     const sortedReviews = allReviews.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
+
     console.log(`✅ Returning ${sortedReviews.length} real reviews`);
     res.json({
       success: true,
@@ -330,9 +314,9 @@ app.get('/api/reviews', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error fetching reviews:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch reviews' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch reviews'
     });
   }
 });
@@ -343,10 +327,9 @@ app.post('/api/reviews/:reviewId/reply', authenticateToken, async (req, res) => 
   const { reply } = req.body;
 
   try {
-    // Update review in database
     const review = await Review.findOneAndUpdate(
       { _id: reviewId, userId: req.user.userId },
-      { 
+      {
         replied: true,
         reply: {
           text: reply,
@@ -361,10 +344,8 @@ app.post('/api/reviews/:reviewId/reply', authenticateToken, async (req, res) => 
       return res.status(404).json({ success: false, error: 'Review not found' });
     }
 
-    // TODO: Post reply to Google My Business API
-
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Reply posted successfully',
       review
     });
@@ -374,19 +355,17 @@ app.post('/api/reviews/:reviewId/reply', authenticateToken, async (req, res) => 
   }
 });
 
-// Sync reviews from Google (manual trigger)
+// Sync reviews from Google
 app.post('/api/sync/google', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
-    
+
     if (!user || !user.googleTokens) {
       return res.status(401).json({ success: false, error: 'Google authentication required' });
     }
 
-    // TODO: Implement actual Google My Business API sync
-    // For now, just return success
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Sync initiated',
       syncedCount: 0
     });
@@ -399,8 +378,8 @@ app.post('/api/sync/google', authenticateToken, async (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
-    success: false, 
+  res.status(500).json({
+    success: false,
     error: 'Something went wrong!',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
