@@ -23,8 +23,11 @@ if (!process.env.MONGODB_URI) {
   // Don't exit - let it try to connect to local MongoDB or continue without DB
 }
 
-// Connect to MongoDB Atlas
-connectDB();
+// Connect to MongoDB Atlas asynchronously (non-blocking)
+connectDB().catch(err => {
+  console.error('⚠️ MongoDB connection failed:', err.message);
+  console.log('⚠️ Server will continue without database connection');
+});
 
 // Google OAuth2 Client
 const oauth2Client = new OAuth2Client(
@@ -93,6 +96,15 @@ const mockReviews = [
     reply: 'Thank you for your feedback, Mike!'
   }
 ];
+
+// Root endpoint for Railway 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    message: 'TastyReply Backend API',
+    status: 'running',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // ✅ Resilient Health check endpoint
 app.get('/health', (req, res) => {

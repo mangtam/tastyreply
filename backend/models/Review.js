@@ -47,3 +47,5 @@ const reviewSchema = new mongoose.Schema({
 
 // Compound index to prevent duplicate reviews
 reviewSchema.index({ platformReviewId: 1, platform: 1, userId: 1 }, { unique: true });
+
+module.exports = mongoose.model('Review', reviewSchema);
